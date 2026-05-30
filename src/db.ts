@@ -383,6 +383,31 @@ const seedData = () => {
       VALUES (null, 'system_init', 'Baza danych HRL Academy Core pomyślnie zainicjalizowana z tabelami PRD i zasilona danymi.', '127.0.0.1')
     `).run();
   }
+
+  // Ensure "Cyfrowy Zen" is added for free to the catalog if it doesn't exist
+  const zenCount = db.prepare('SELECT COUNT(*) as count FROM courses WHERE slug = ?').get('cyfrowy-zen') as { count: number };
+  if (zenCount.count === 0) {
+    db.prepare(`
+      INSERT INTO courses (title, slug, description, thumbnail, access_type, price, status, created_by, external_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'Cyfrowy Zen',
+      'cyfrowy-zen',
+      'Kurs Cyfrowy Zen - osiągnij spokój umysłu w cyfrowym świecie. Pełen dostęp edukacyjny przez HRL Core.',
+      'https://picsum.photos/seed/zen/800/450',
+      'free',
+      0.00,
+      'published',
+      1,
+      'https://cyfrowy-zen.hardbanrecordslab.online/'
+    );
+     // Auto-enroll student inside the seeding
+    const zenCourseId = (db.prepare('SELECT id FROM courses WHERE slug = ?').get('cyfrowy-zen') as any).id;
+    // Auto-enroll admin and student to have access (userId 2 is student, 1 is admin)
+    const enroll = db.prepare(`INSERT OR IGNORE INTO enrollments (user_id, course_id, access_type, expires_at) VALUES (?, ?, 'free', null)`);
+    enroll.run(1, zenCourseId);
+    enroll.run(2, zenCourseId);
+  }
 };
 
 try {

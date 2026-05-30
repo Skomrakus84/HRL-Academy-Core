@@ -162,6 +162,7 @@ export default function App() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [courseStructure, setCourseStructure] = useState<{ course: Course; isEnrolled: boolean; modules: Module[] } | null>(null);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [showExternalCoursePreview, setShowExternalCoursePreview] = useState(false);
   const [lessonAccessDetails, setLessonAccessDetails] = useState<any>(null);
   const [signingToken, setSigningToken] = useState(false);
 
@@ -695,6 +696,7 @@ export default function App() {
   const handleOpenCourse = async (course: Course) => {
     setSelectedCourse(course);
     setActiveLesson(null);
+    setShowExternalCoursePreview(false);
     setLessonAccessDetails(null);
     try {
       const authHeader = { 'x-user-id': currentUser?.id.toString() || '2' };
@@ -2683,23 +2685,57 @@ export default function App() {
                                         
                                         {selectedCourse.isEnrolled && (
                                           <div className="pt-2">
-                                            <div className="bg-brand-card p-4 rounded-xl border border-brand-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                              <div>
-                                                <p className="text-[10px] font-mono uppercase text-text-secondary">Platforma Zewnętrzna</p>
-                                                <p className="text-xs font-semibold text-neutral-805">Lekcje, laboratoria i pełny program są hostowane na zewnętrznym serwerze.</p>
+                                            <div className="bg-brand-card p-4 rounded-xl border border-brand-border flex flex-col gap-4">
+                                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                                <div>
+                                                  <p className="text-[10px] font-mono uppercase text-text-secondary">Platforma Zewnętrzna</p>
+                                                  <p className="text-xs font-semibold text-text-primary">Lekcje, laboratoria i pełny program hostowane są na odrębnej domenie edukacyjnej.</p>
+                                                </div>
+                                                <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2 shrink-0">
+                                                  {showExternalCoursePreview ? (
+                                                    <button
+                                                      onClick={() => setShowExternalCoursePreview(false)}
+                                                      className="inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-neutral-800 text-white hover:bg-neutral-700 transition-colors border-none cursor-pointer"
+                                                    >
+                                                      <span>Zamknij podgląd</span>
+                                                    </button>
+                                                  ) : (
+                                                    <button
+                                                      onClick={() => setShowExternalCoursePreview(true)}
+                                                      className={`inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-all border-none cursor-pointer ${
+                                                        accentColor === 'emerald' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                                                        accentColor === 'amber' ? 'bg-amber-600 hover:bg-amber-700' :
+                                                        accentColor === 'indigo' ? 'bg-accent-blue hover:bg-accent-purple' : 'bg-accent-purple hover:bg-neutral-800'
+                                                      }`}
+                                                    >
+                                                      <span>Uruchom kurs w HRL Core (iFrame)</span>
+                                                    </button>
+                                                  )}
+                                                  <a 
+                                                    href={selectedCourse.external_url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-brand-bg border border-brand-border text-text-primary hover:bg-brand-card transition-colors"
+                                                  >
+                                                    <span>Otwórz w nowej karcie ↗</span>
+                                                  </a>
+                                                </div>
                                               </div>
-                                              <a 
-                                                href={selectedCourse.external_url || "https://academy.hrl.pl"}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className={`inline-flex items-center space-x-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-all ${
-                                                  accentColor === 'emerald' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                                                  accentColor === 'amber' ? 'bg-amber-600 hover:bg-amber-700' :
-                                                  accentColor === 'indigo' ? 'bg-accent-blue hover:bg-accent-purple' : 'bg-accent-purple hover:bg-neutral-800'
-                                                }`}
-                                              >
-                                                <span>Przejdź do kursu ↗</span>
-                                              </a>
+                                              
+                                              {showExternalCoursePreview && (
+                                                <div className="mt-4 rounded-xl overflow-hidden border border-brand-border bg-neutral-950 aspect-[16/9] w-full relative">
+                                                  <div className="absolute top-2 right-4 z-10 flex items-center space-x-2 bg-black/50 px-2 py-1.5 rounded-lg border border-white/10 backdrop-blur-md">
+                                                    <Lock size={10} className="text-emerald-400" />
+                                                    <span className="text-[9px] font-mono text-white/70">Zaufana domena ({new URL(selectedCourse.external_url).hostname})</span>
+                                                  </div>
+                                                  <iframe 
+                                                    src={selectedCourse.external_url}
+                                                    className="w-full h-full border-none"
+                                                    title={`Kurs ${selectedCourse.title}`}
+                                                    allow="fullscreen"
+                                                  />
+                                                </div>
+                                              )}
                                             </div>
                                           </div>
                                         )}
