@@ -55,6 +55,7 @@ db.exec(`
       lesson_order INTEGER DEFAULT 0,
       drip_days INTEGER DEFAULT 0,
       duration_minutes INTEGER DEFAULT 0,
+      passing_score INTEGER DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(course_id) REFERENCES courses(id) ON DELETE CASCADE,
       FOREIGN KEY(module_id) REFERENCES modules(id) ON DELETE CASCADE
@@ -108,6 +109,26 @@ db.exec(`
       FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY(lesson_id) REFERENCES lessons(id) ON DELETE CASCADE,
       UNIQUE(user_id, lesson_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS quiz_questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lesson_id INTEGER NOT NULL,
+      question_text TEXT NOT NULL,
+      options_json TEXT NOT NULL,
+      correct_option_index INTEGER NOT NULL,
+      FOREIGN KEY(lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS quiz_attempts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      lesson_id INTEGER NOT NULL,
+      score_percent INTEGER NOT NULL,
+      passed BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY(lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS access_tokens (
@@ -175,6 +196,13 @@ try {
   console.log("Migration: Added template_style column to certificates table successfully.");
 } catch (e: any) {
   console.log("Migration template_style (Ignore if columns exist):", e.message);
+}
+
+try {
+  db.exec("ALTER TABLE lessons ADD COLUMN passing_score INTEGER DEFAULT 0;");
+  console.log("Migration: Added passing_score column to lessons table successfully.");
+} catch (e: any) {
+  console.log("Migration passing_score (Ignore if columns exist):", e.message);
 }
 
 // Seed data function to prepopulate tables with realistic data for live preview
@@ -304,6 +332,50 @@ const seedData = () => {
     `);
     insertProgress.run(2, 1, 100, 1);
     insertProgress.run(2, 2, 45, 0);
+
+    // 9. Seed Quizzes for lesson 1
+    db.prepare(`UPDATE lessons SET passing_score = 60 WHERE id = 1`).run();
+    
+    const insertQuestion = db.prepare(`
+      INSERT INTO quiz_questions (lesson_id, question_text, options_json, correct_option_index)
+      VALUES (?, ?, ?, ?)
+    `);
+    
+    insertQuestion.run(
+      1,
+      "Czym różni się kontener od maszyny wirtualnej (VM)?",
+      JSON.stringify([
+        "Kontener współdzieli jądro systemu operacyjnego gospodarza, a VM posiada pełny system operacyjny-gościa.",
+        "VM jest zawsze szybszy i mniejszy niż kontener.",
+        "Kontener wymaga hypervisora do uruchomienia.",
+        "Nie ma żadnych różnic architektonicznych."
+      ]),
+      0
+    );
+
+    insertQuestion.run(
+      1,
+      "Jaka instrukcja w pliku Dockerfile służy do zdefiniowania domyślnego polecenia startowego?",
+      JSON.stringify([
+        "RUN",
+        "CMD",
+        "EXPOSE",
+        "COPY"
+      ]),
+      1
+    );
+
+    insertQuestion.run(
+      1,
+      "Co oznacza flaga '-d' w poleceniu 'docker run'?",
+      JSON.stringify([
+        "Uruchomienie w trybie interaktywnym (interactive)",
+        "Automatyczne usunięcie kontenera po zakończeniu (rm)",
+        "Uruchomienie kontenera w tle (detached mode)",
+        "Przypisanie wolumenu danych (volume)"
+      ]),
+      2
+    );
 
     // Log seed event
     db.prepare(`
